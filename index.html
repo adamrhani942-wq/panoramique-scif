@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Panoramique | Saisie</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #eef2f7;
+            padding: 20px;
+        }
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        /* Header */
+        .header {
+            background: linear-gradient(98deg, #0b2b44, #1f4a7a);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid #f9b81b;
+        }
+        .logo-area { display: flex; align-items: center; gap: 16px; }
+        .logo { height: 48px; }
+        .title h1 { font-size: 1.8rem; font-weight: 500; }
+        .title p { font-size: 0.8rem; opacity: 0.8; }
+        .time-box { font-size: 1rem; background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 40px; }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            background: white;
+            padding: 0 24px;
+        }
+        .tab-btn {
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #5f6c80;
+            transition: 0.1s;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active {
+            color: #1f4a7a;
+            border-bottom-color: #1f4a7a;
+        }
+        .tab-content {
+            display: none;
+            padding: 0;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* KPI (dashboard) */
+        .kpi-row {
+            display: flex;
+            gap: 20px;
+            padding: 20px 24px;
+            background: #f8fafd;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .kpi-card {
+            background: white;
+            border-radius: 20px;
+            padding: 12px 20px;
+            flex: 1;
+            border-left: 5px solid #1f4a7a;
+        }
+        .kpi-card:nth-child(2) { border-left-color: #f9b81b; }
+        .kpi-card:nth-child(3) { border-left-color: #c13e2b; }
+        .kpi-label { font-size: 0.75rem; text-transform: uppercase; color: #5f6c80; }
+        .kpi-value { font-size: 2rem; font-weight: 700; color: #1f3a5f; line-height: 1.2; margin-top: 4px; }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            gap: 12px;
+        }
+        .search-box {
+            flex: 2;
+            min-width: 260px;
+            position: relative;
+        }
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #7c8b9e;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 10px 12px 10px 38px;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.9rem;
+        }
+        .filter-group { display: flex; gap: 12px; }
+        .filter-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 30px;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .filter-btn.active {
+            background: #1f4a7a;
+            color: white;
+            border-color: #1f4a7a;
+        }
+
+        /* Table styles (dashboard) */
+        .table-wrapper {
+            overflow-x: auto;
+            background: white;
+        }
+        .data-table {
+            width: max-content;
+            min-width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7rem;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #e0e7ef;
+            padding: 8px 6px;
+            white-space: nowrap;
+        }
+        .data-table th {
+            background: #eef2f7;
+            position: sticky;
+            top: 0;
+            font-weight: 600;
+        }
+        .data-table th:first-child,
+        .data-table td:first-child {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 10;
+        }
+        .data-table th:first-child { background: #eef2f7; }
+        .tree-row { cursor: pointer; }
+        .tree-row.selected { background: #fff0c0; }
+        .expand-icon {
+            cursor: pointer;
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .level-of { background-color: #f0f4fa; font-weight: 600; }
+        .level-equip { background-color: #ffffff; }
+        .level-plan { background-color: #fef9e6; }
+        .level-da { background-color: #ffffff; }
+        .level-cmd { background-color: #f9f9fc; }
+
+        /* Management view */
+        .management-container {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .of-card {
+            background: #f9fafc;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+        .of-header {
+            background: #1f4a7a;
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .of-header .title { font-weight: 600; font-size: 1.1rem; }
+        .of-header .actions button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-left: 8px;
+            cursor: pointer;
+        }
+        .of-children { padding: 16px; border-top: 1px solid #e2e8f0; display: none; }
+        .of-children.open { display: block; }
+        .affaire-item {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .affaire-header {
+            background: #f1f5f9;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .affaire-header .title { font-weight: 500; }
+        .affaire-children { padding: 12px; display: none; }
+        .affaire-children.open { display: block; }
+        .equip-item, .plan-item, .da-item, .cmd-item {
+            background: #ffffff;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #eef2f7;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .level-badge {
+            background: #eef2f7;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        .action-buttons button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-left: 8px;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        .action-buttons button:hover { background: #e9ecef; }
+        .add-btn {
+            background: #1f4a7a;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 700px;
+            max-width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .modal-content h3 {
+            margin-bottom: 16px;
+            color: #1f4a7a;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 16px 0 12px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1f4a7a;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border-radius: 30px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background: #1f4a7a;
+            color: white;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #1f3a5f;
+        }
+        .footer {
+            padding: 12px 24px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.7rem;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="header">
+        <div class="logo-area">
+            <img class="logo" src="https://www.dreamjob.ma/wp-content/uploads/2019/09/SCIF-Emploi-Recrutement-1-1024x536.png" alt="SCIF">
+            <div class="title"><h1>Panoramique</h1><p>Saisie</p></div>
+        </div>
+        <div class="time-box" id="liveTime">--:--:--</div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="dashboard">📊 Tableau de bord</button>
+        <button class="tab-btn" data-tab="management">🗂️ Saisie</button>
+    </div>
+
+    <div id="dashboardTab" class="tab-content active">
+        <div class="kpi-row">
+            <div class="kpi-card"><div class="kpi-label">Projets actifs (OF)</div><div class="kpi-value" id="kpi-of">0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Modifications contrat</div><div class="kpi-value" id="kpi-mod">0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Alertes actives</div><div class="kpi-value" id="kpi-alert">0</div></div>
+        </div>
+        <div class="toolbar">
+            <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Rechercher..."></div>
+            <div class="filter-group">
+                <button class="filter-btn active" data-filter="all">Tous</button>
+                <button class="filter-btn" data-filter="alert">⚠️ Alertes</button>
+                <button class="filter-btn" data-filter="delayed">🔴 Retards</button>
+            </div>
+            <div>
+                <button id="expandAllDashboard" class="add-btn" style="background:#eef2f7; color:#1f4a7a;">▼ Tout déplier</button>
+                <button id="collapseAllDashboard" class="add-btn" style="background:#eef2f7; color:#1f4a7a;">▶ Tout replier</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table" id="dashboardTable">
+                <thead id="dashboardHeader"></thead>
+                <tbody id="dashboardBody"></tbody>
+             </table>
+        </div>
+    </div>
+
+    <div id="managementTab" class="tab-content">
+        <div style="padding: 20px; text-align: right;">
+            <button id="addOfBtn" class="add-btn" style="background:#1f4a7a;">➕ Nouvel OF</button>
+        </div>
+        <div id="managementContainer" class="management-container"></div>
+    </div>
+
+    <div class="footer">
+        <div>Données en mémoire – sauvegarde locale activée</div>
+    </div>
+</div>
+
+<script>
+    // ========== DONNÉES PAR DÉFAUT ==========
+    const defaultData = [
+        {
+            id: 1, type: "OF", ofNumber: "OF2822", affaire: "Bogie Y25", delai: "2026-06-30", poids: 4500, alerteModif: "Non", chargeSCIF: "Oui",
+            children: [
+                { id: 2, type: "Equipement", equipement: "Bogie Y25", sousEquip: "Ensemble principal",
+                  // Production
+                  pctSortie: 85, pctDebitage: 90, pctChaudro: 70, pctTraitement: 45, pctBFT: 60, alerteProd: "Non",
+                  // Logistique / livraison
+                  bl: "BL-001", pctLivraison: 60, accessoires: "Oui", pctReceptionEquip: 50, miseDispo: "2026-07-15",
+                  // Montage
+                  pctPreassemblage: 40, pctInstallation: 30, pctControleEquipe: 80, pctControleEquip: 70, inspectionFinale: "En cours", alerteMontage: "Non",
+                  // Réceptions
+                  receptionPartielle: "Non", receptionProvisoire: "Non", receptionDefinitive: "Non", alerteQualiteFinale: "Non",
+                  // Qualité / contrôle
+                  dateControle: "", pctControle: 0, resultatControle: "", alerteQualite: "Non",
+                  // Autres
+                  reservationParc: "Parc A", alerteLog: "Non", inspectionClient: "Partielle", transmissionDossier: "Oui",
+                  receptionClient: "Partielle",
+                  children: [
+                    { id: 3, type: "Plan", plan: "P-001", designationPiece: "Châssis principal", sousEnsStatut: "Validé",
+                      children: [
+                        { id: 4, type: "DA", da: "DA-001", pctDA: 100, dateRecepPlan: "2025-06-15", alerteMethode: false,
+                          children: [
+                            { id: 5, type: "CMD", cde: "CMD-001", pctCMD: 100, datePassation: "2025-05-20", dateLivraisonPrev: "2025-07-10", pctRecepDA: 100, alerteAchats: "Non", dateControle: "2025-07-12", pctControle: 100, resultatControle: "Conforme", alerteQualite: "Non" },
+                            { id: 6, type: "CMD", cde: "CMD-002", pctCMD: 100, datePassation: "2025-05-20", dateLivraisonPrev: "2025-07-10", pctRecepDA: 100, alerteAchats: "Non", dateControle: "2025-07-12", pctControle: 100, resultatControle: "Conforme", alerteQualite: "Non" }
+                          ] },
+                        { id: 7, type: "DA", da: "DA-002", pctDA: 80, dateRecepPlan: "2025-06-20", alerteMethode: true,
+                          children: [
+                            { id: 8, type: "CMD", cde: "CMD-003", pctCMD: 50, datePassation: "2025-05-25", dateLivraisonPrev: "2025-07-20", pctRecepDA: 30, alerteAchats: "Oui", dateControle: "2025-07-15", pctControle: 30, resultatControle: "Non conforme", alerteQualite: "Oui" }
+                          ] }
+                      ] },
+                    { id: 9, type: "Plan", plan: "P-002", designationPiece: "Suspension", sousEnsStatut: "En attente",
+                      children: [
+                        { id: 10, type: "DA", da: "DA-003", pctDA: 60, dateRecepPlan: "2025-07-01", alerteMethode: false,
+                          children: [
+                            { id: 11, type: "CMD", cde: "CMD-004", pctCMD: 30, datePassation: "2025-06-01", dateLivraisonPrev: "2025-08-01", pctRecepDA: 0, alerteAchats: "Non", dateControle: "", pctControle: 0, resultatControle: "", alerteQualite: "Non" }
+                          ] }
+                      ] }
+                  ] },
+                { id: 12, type: "Equipement", equipement: "Bogie Y25", sousEquip: "Timonerie frein",
+                  pctSortie: 40, pctDebitage: 50, pctChaudro: 30, pctTraitement: 20, pctBFT: 25, alerteProd: "Oui",
+                  bl: "", pctLivraison: 0, accessoires: "", pctReceptionEquip: 0, miseDispo: "",
+                  pctPreassemblage: 0, pctInstallation: 0, pctControleEquipe: 0, pctControleEquip: 0, inspectionFinale: "", alerteMontage: "Non",
+                  receptionPartielle: "", receptionProvisoire: "", receptionDefinitive: "", alerteQualiteFinale: "Non",
+                  reservationParc: "Parc B", alerteLog: "Non", inspectionClient: "", transmissionDossier: "",
+                  receptionClient: "Non commencée",
+                  children: [
+                    { id: 13, type: "Plan", plan: "P-003", designationPiece: "Bielle de frein", sousEnsStatut: "En cours",
+                      children: [
+                        { id: 14, type: "DA", da: "DA-004", pctDA: 40, dateRecepPlan: "2025-07-15", alerteMethode: true,
+                          children: [
+                            { id: 15, type: "CMD", cde: "CMD-005", pctCMD: 20, datePassation: "2025-06-10", dateLivraisonPrev: "2025-08-15", pctRecepDA: 0, alerteAchats: "Non", dateControle: "", pctControle: 0, resultatControle: "", alerteQualite: "Oui" }
+                          ] }
+                      ] }
+                  ] }
+              ] },
+        { id: 16, type: "OF", ofNumber: "OF2886", affaire: "Réservoirs Butane", delai: "2026-07-18", poids: 8500, alerteModif: "Non", chargeSCIF: "Oui",
+          children: [
+            { id: 17, type: "Equipement", equipement: "Réservoir B1-320m3", sousEquip: "Virole",
+              pctSortie: 95, pctDebitage: 100, pctChaudro: 80, pctTraitement: 70, pctBFT: 85, alerteProd: "Non",
+              bl: "BL-002", pctLivraison: 20, accessoires: "Non", pctReceptionEquip: 0, miseDispo: "",
+              pctPreassemblage: 0, pctInstallation: 0, pctControleEquipe: 0, pctControleEquip: 0, inspectionFinale: "Non", alerteMontage: "Non",
+              receptionPartielle: "", receptionProvisoire: "", receptionDefinitive: "", alerteQualiteFinale: "Non",
+              reservationParc: "Parc C", alerteLog: "Non", inspectionClient: "", transmissionDossier: "",
+              receptionClient: "En cours",
+              children: [
+                { id: 18, type: "Plan", plan: "P-101", designationPiece: "Assemblage virole", sousEnsStatut: "Validé",
+                  children: [
+                    { id: 19, type: "DA", da: "DA-101", pctDA: 100, dateRecepPlan: "2025-06-10", alerteMethode: false,
+                      children: [
+                        { id: 20, type: "CMD", cde: "CMD-101", pctCMD: 100, datePassation: "2025-05-15", dateLivraisonPrev: "2025-07-01", pctRecepDA: 100, alerteAchats: "Non", dateControle: "2025-07-02", pctControle: 100, resultatControle: "Conforme", alerteQualite: "Non" }
+                      ] }
+                  ] }
+              ] }
+          ] }
+    ];
+
+    // INITIALISATION AVEC LE LOCALSTORAGE
+    let globalData = JSON.parse(localStorage.getItem('scif_panoramique_data')) || defaultData;
+    let nextId = parseInt(localStorage.getItem('scif_panoramique_next_id')) || 21;
+
+    // FONCTION DE SAUVEGARDE LORS DES CHANGEMENTS
+    function saveToLocalStorage() {
+        localStorage.setItem('scif_panoramique_data', JSON.stringify(globalData));
+        localStorage.setItem('scif_panoramique_next_id', nextId);
+    }
+
+    // États d'expansion
+    let expandedDashboard = new Set();
+    let expandedManagement = new Set();
+
+    function collectAllIds(node, set) {
+        set.add(node.id);
+        if (node.children) node.children.forEach(c => collectAllIds(c, set));
+    }
+    globalData.forEach(of => collectAllIds(of, expandedDashboard));
+    globalData.forEach(of => collectAllIds(of, expandedManagement));
+
+    // ========== UTILITAIRES ==========
+    function updateTime() {
+        document.getElementById("liveTime").innerHTML = new Date().toLocaleTimeString("fr-FR");
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    // Colonnes
+    const allColumns = [
+        "Hiérarchie", "N° OF", "Affaire", "Équipement", "Délai contractuel", "Poids", "Alerte modification", "À la charge SCIF",
+        "Sous equipement", "Note calcul", "Désignation", "N° plan", "Désignation pièce", "Sous-ensemble statut",
+        "Bureau externe", "Alerte Ing", "N° DA", "% DA", "Date récep plan", "Alerte Méthode", "Réservation parc",
+        "Alerte Log", "N° CDE", "% CMD", "% CMD besoin", "Date passation", "Date LC", "Date livraison prévue",
+        "% récep DA", "% récep besoin", "Alerte Achats", "Date contrôle", "% contrôle", "Résultat contrôle",
+        "Alerte Qualité", "N° dossier", "% sortie matière", "% débitage", "% chaudronnerie", "% traitement surf",
+        "% BFT", "Alerte prod", "Inspection client", "Transmission dossier", "Alerte Qualité2", "BL", "% livraison",
+        "Accessoires", "% récep équip", "Mise à dispo", "% pré-assemblage", "% installation", "% contrôle équipe",
+        "% contrôle équip", "Inspection finale", "Alerte montage", "Réception partielle", "Réception provisoire",
+        "Réception définitive", "Alerte qualité finale"
+    ];
+
+    function getCellValue(node, col) {
+        const map = {
+            "N° OF": "ofNumber", "Affaire": "affaire", "Équipement": "equipement", "Délai contractuel": "delai", "Poids": "poids",
+            "Alerte modification": "alerteModif", "À la charge SCIF": "chargeSCIF", "Sous equipement": "sousEquip",
+            "Note calcul": "noteCalcul", "Désignation": "designation", "N° plan": "planStatut", "Désignation pièce": "designationPiece",
+            "Sous-ensemble statut": "sousEnsStatut", "Bureau externe": "bureauExterne", "Alerte Ing": "alerteIng",
+            "N° DA": "da", "% DA": "pctDA", "Date récep plan": "dateRecepPlan", "Alerte Méthode": "alerteMethode",
+            "Réservation parc": "reservationParc", "Alerte Log": "alerteLog", "N° CDE": "cde", "% CMD": "pctCMD",
+            "% CMD besoin": "pctCMDBesoin", "Date passation": "datePassation", "Date LC": "dateOuvertureLC",
+            "Date livraison prévue": "dateLivraisonPrev", "% récep DA": "pctRecepDA", "% récep besoin": "pctRecepBesoin",
+            "Alerte Achats": "alerteAchats", "Date contrôle": "dateControle", "% contrôle": "pctControle",
+            "Résultat contrôle": "resultatControle", "Alerte Qualité": "alerteQualite", "N° dossier": "dossierFab",
+            "% sortie matière": "pctSortie", "% débitage": "pctDebitage", "% chaudronnerie": "pctChaudro",
+            "% traitement surf": "pctTraitement", "% BFT": "pctBFT", "Alerte prod": "alerteProd", "Inspection client": "inspectionClient",
+            "Transmission dossier": "transmissionDossier", "Alerte Qualité2": "alerteQualite2", "BL": "bl",
+            "% livraison": "pctLivraison", "Accessoires": "accessoires", "% récep équip": "pctReceptionEquip",
+            "Mise à dispo": "miseDispo", "% pré-assemblage": "pctPreassemblage", "% installation": "pctInstallation",
+            "% contrôle équipe": "pctControleEquipe", "% contrôle équip": "pctControleEquip", "Inspection finale": "inspectionFinale",
+            "Alerte montage": "alerteMontage", "Réception partielle": "receptionPartielle", "Réception provisoire": "receptionProvisoire",
+            "Réception définitive": "receptionDefinitive", "Alerte qualité finale": "alerteQualiteFinale"
+        };
+        let prop = map[col];
+        if (prop && node[prop] !== undefined) return node[prop];
+        return "";
+    }
+
+    function renderDashboard() {
+        const thead = document.getElementById("dashboardHeader");
+        thead.innerHTML = "";
+        const trHead = document.createElement("tr");
+        allColumns.forEach(col => { const th = document.createElement("th"); th.textContent = col; trHead.appendChild(th); });
+        thead.appendChild(trHead);
+        const tbody = document.getElementById("dashboardBody");
+        tbody.innerHTML = "";
+        globalData.forEach(root => renderDashboardNode(root, 0, tbody));
+        const ofCount = globalData.length;
+        const modifCount = globalData.filter(of => of.alerteModif === "Oui" || of.children?.some(e => e.alerteAchats === "Oui")).length;
+        const alertCount = globalData.filter(of => of.alerteModif === "Oui").length + globalData.flatMap(of => of.children || []).filter(e => e.alerteProd === "Oui").length;
+        document.getElementById("kpi-of").innerText = ofCount;
+        document.getElementById("kpi-mod").innerText = modifCount;
+        document.getElementById("kpi-alert").innerText = alertCount;
+    }
+
+    function renderDashboardNode(node, level, parentElem) {
+        const row = document.createElement("tr");
+        row.className = `tree-row level-${node.type === "OF" ? "of" : node.type === "Equipement" ? "equip" : node.type === "Plan" ? "plan" : node.type === "DA" ? "da" : "cmd"}`;
+        const td1 = document.createElement("td");
+        let expandHtml = "";
+        if (node.children && node.children.length) {
+            expandHtml = `<span class="expand-icon" data-id="${node.id}" data-dashboard="true">${expandedDashboard.has(node.id) ? '▼' : '▶'}</span> `;
+        } else {
+            expandHtml = '<span style="display:inline-block;width:20px;"></span> ';
+        }
+        let display = "";
+        if (node.type === "OF") display = `OF ${node.ofNumber}`;
+        else if (node.type === "Equipement") display = `Équipement : ${node.equipement}`;
+        else if (node.type === "Plan") display = `Plan : ${node.plan}`;
+        else if (node.type === "DA") display = `DA : ${node.da}`;
+        else if (node.type === "CMD") display = `CMD : ${node.cde}`;
+        td1.innerHTML = expandHtml + display;
+        td1.style.paddingLeft = (level * 20 + 8) + "px";
+        row.appendChild(td1);
+        for (let i = 1; i < allColumns.length; i++) {
+            const td = document.createElement("td");
+            let val = getCellValue(node, allColumns[i]);
+            if (allColumns[i] === "% DA" && node.type === "DA") {
+                const pct = node.pctDA;
+                let cls = pct >= 90 ? "status-ok" : pct >= 50 ? "status-warning" : "status-alert";
+                td.innerHTML = `<span class="${cls}">${pct}%</span>`;
+            } else if ((allColumns[i] === "% CMD" || allColumns[i] === "% récep DA") && node.type === "CMD") {
+                const pct = parseInt(val);
+                let cls = pct >= 90 ? "status-ok" : pct >= 50 ? "status-warning" : "status-alert";
+                td.innerHTML = `<span class="${cls}">${val}</span>`;
+            } else if (allColumns[i] === "Alerte prod" && node.alerteProd === "Oui") {
+                td.innerHTML = '<span class="status-alert">⚠️ Oui</span>';
+            } else if (allColumns[i] === "Alerte Achats" && node.alerteAchats === "Oui") {
+                td.innerHTML = '<span class="status-alert">⚠️ Oui</span>';
+            } else {
+                td.textContent = val;
+            }
+            row.appendChild(td);
+        }
+        parentElem.appendChild(row);
+        if (node.children && expandedDashboard.has(node.id)) {
+            node.children.forEach(child => renderDashboardNode(child, level + 1, parentElem));
+        }
+    }
+
+    // ========== Saisie ==========
+    let searchTerm = "";
+    let currentFilter = "all";
+
+    function renderManagement() {
+        const container = document.getElementById("managementContainer");
+        container.innerHTML = "";
+        globalData.forEach(of => {
+            const ofCard = document.createElement("div");
+            ofCard.className = "of-card";
+            const header = document.createElement("div");
+            header.className = "of-header";
+            header.innerHTML = `<div class="title">OF ${of.ofNumber} - ${of.affaire || ''}</div>
+                                 <div class="actions">
+                                    <button class="add-child" data-type="Affaire" data-parent-id="${of.id}">➕ Affaire</button>
+                                    <button class="edit-item" data-type="OF" data-id="${of.id}">✏️</button>
+                                    <button class="delete-item" data-id="${of.id}">🗑️</button>
+                                 </div>`;
+            header.addEventListener("click", (e) => {
+                if (e.target.tagName === 'BUTTON') return;
+                const childrenDiv = ofCard.querySelector(".of-children");
+                childrenDiv.classList.toggle("open");
+            });
+            ofCard.appendChild(header);
+            const childrenDiv = document.createElement("div");
+            childrenDiv.className = `of-children ${expandedManagement.has(of.id) ? "open" : ""}`;
+            childrenDiv.setAttribute("data-of-id", of.id);
+            ofCard.appendChild(childrenDiv);
+            if (of.children) {
+                of.children.forEach(equip => renderManagementItem(equip, childrenDiv, 1));
+            }
+            container.appendChild(ofCard);
+        });
+        // Attacher événements
+        document.querySelectorAll(".add-child").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const parentId = parseInt(btn.getAttribute("data-parent-id"));
+                const childType = btn.getAttribute("data-type");
+                openModal("create", childType, parentId);
+            });
+        });
+        document.querySelectorAll(".edit-item").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.getAttribute("data-id"));
+                const type = btn.getAttribute("data-type");
+                const node = findNodeById(globalData, id);
+                if (node) openModal("edit", type, null, node);
+            });
+        });
+        document.querySelectorAll(".delete-item").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.getAttribute("data-id"));
+                if (confirm("Supprimer définitivement cet élément et tous ses descendants ?")) {
+                    deleteNodeById(id);
+                }
+            });
+        });
+    }
+
+    function renderManagementItem(node, parentDiv, level) {
+        const itemDiv = document.createElement("div");
+        itemDiv.className = `${node.type === "Equipement" ? "equip-item" : node.type === "Plan" ? "plan-item" : node.type === "DA" ? "da-item" : "cmd-item"}`;
+        let displayName = "";
+        if (node.type === "Equipement") displayName = `${node.equipement}`;
+        else if (node.type === "Plan") displayName = `Plan ${node.plan}`;
+        else if (node.type === "DA") displayName = `DA ${node.da} (${node.pctDA}%)`;
+        else if (node.type === "CMD") displayName = `CMD ${node.cde} (${node.pctCMD}%)`;
+        const content = `<div><span class="level-badge">${node.type}</span> ${displayName}</div>
+                         <div class="action-buttons">
+                            ${node.type !== "CMD" ? `<button class="add-child" data-type="${getChildType(node.type)}" data-parent-id="${node.id}">➕</button>` : ''}
+                            <button class="edit-item" data-type="${node.type}" data-id="${node.id}">✏️</button>
+                            <button class="delete-item" data-id="${node.id}">🗑️</button>
+                         </div>`;
+        itemDiv.innerHTML = content;
+        parentDiv.appendChild(itemDiv);
+        if (node.children && node.children.length > 0) {
+            const childContainer = document.createElement("div");
+            childContainer.style.marginLeft = "20px";
+            childContainer.style.marginTop = "8px";
+            parentDiv.appendChild(childContainer);
+            node.children.forEach(child => renderManagementItem(child, childContainer, level + 1));
+        }
+    }
+
+    function getChildType(parentType) {
+        const map = { "OF": "Affaire", "Affaire": "Equipement", "Equipement": "Plan", "Plan": "DA", "DA": "CMD" };
+        return map[parentType];
+    }
+
+    function findNodeById(nodes, id) {
+        for (let node of nodes) {
+            if (node.id === id) return node;
+            if (node.children) {
+                const found = findNodeById(node.children, id);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    function deleteNodeById(id) {
+        function removeFromArray(arr, id) {
+            for (let i = 0; i < arr.length; i++) {
+                if (arr[i].id === id) {
+                    arr.splice(i, 1);
+                    return true;
+                }
+                if (arr[i].children && removeFromArray(arr[i].children, id)) return true;
+            }
+            return false;
+        }
+        removeFromArray(globalData, id);
+        expandedDashboard.clear(); expandedManagement.clear();
+        globalData.forEach(of => collectAllIds(of, expandedDashboard));
+        globalData.forEach(of => collectAllIds(of, expandedManagement));
+        
+        saveToLocalStorage(); // SAUVEGARDE LORS DE LA SUPPRESSION
+        
+        renderDashboard();
+        renderManagement();
+    }
+
+    function addOrUpdateItem(mode, type, parentId, itemData, existingId = null) {
+        if (mode === "create") {
+            const newId = nextId++;
+            const parent = findNodeById(globalData, parentId);
+            if (!parent) return;
+            const newItem = { id: newId, type: type, children: [], ...itemData };
+            if (!parent.children) parent.children = [];
+            parent.children.push(newItem);
+        } else if (mode === "edit") {
+            const node = findNodeById(globalData, existingId);
+            if (node) {
+                Object.assign(node, itemData);
+            }
+        }
+        
+        saveToLocalStorage(); // SAUVEGARDE LORS DE L'AJOUT/MODIFICATION
+        
+        renderDashboard();
+        renderManagement();
+    }
+
+    // ========== MODAL AVEC SECTIONS POUR ÉQUIPEMENT ==========
+    let currentModal = null;
+    function openModal(mode, type, parentId, existingNode = null) {
+        if (currentModal) closeModal();
+        const modalDiv = document.createElement("div");
+        modalDiv.className = "modal";
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "modal-content";
+        const title = mode === "create" ? `Ajouter ${type}` : `Modifier ${type}`;
+        contentDiv.innerHTML = `<h3>${title}</h3><div id="modalFormContainer"></div><div class="modal-buttons"><button class="btn btn-secondary" id="cancelModal">Annuler</button><button class="btn btn-primary" id="saveModal">Enregistrer</button></div>`;
+        const formContainer = contentDiv.querySelector("#modalFormContainer");
+        // Générer les champs selon le type, avec sections pour Equipement
+        if (type === "Equipement") {
+            formContainer.innerHTML = `
+                <div class="section-title">📋 Général</div>
+                <div class="form-group"><label>Équipement *</label><input type="text" id="field_equipement" value="${existingNode?.equipement || ''}"></div>
+                <div class="form-group"><label>Sous-équipement</label><input type="text" id="field_sousEquip" value="${existingNode?.sousEquip || ''}"></div>
+                <div class="form-group"><label>Réservation parc</label><input type="text" id="field_reservationParc" value="${existingNode?.reservationParc || ''}"></div>
+                <div class="form-group"><label>Alerte Logistique</label><input type="text" id="field_alerteLog" value="${existingNode?.alerteLog || ''}"></div>
+
+                <div class="section-title">🏭 Production</div>
+                <div class="form-group"><label>% sortie matière</label><input type="text" id="field_pctSortie" value="${existingNode?.pctSortie || 0}"></div>
+                <div class="form-group"><label>% débitage</label><input type="text" id="field_pctDebitage" value="${existingNode?.pctDebitage || 0}"></div>
+                <div class="form-group"><label>% chaudronnerie</label><input type="text" id="field_pctChaudro" value="${existingNode?.pctChaudro || 0}"></div>
+                <div class="form-group"><label>% traitement surface</label><input type="text" id="field_pctTraitement" value="${existingNode?.pctTraitement || 0}"></div>
+                <div class="form-group"><label>% BFT</label><input type="text" id="field_pctBFT" value="${existingNode?.pctBFT || 0}"></div>
+                <div class="form-group"><label>Alerte production</label><input type="text" id="field_alerteProd" value="${existingNode?.alerteProd || 'Non'}"></div>
+
+                <div class="section-title">📦 Logistique & Livraison</div>
+                <div class="form-group"><label>BL</label><input type="text" id="field_bl" value="${existingNode?.bl || ''}"></div>
+                <div class="form-group"><label>% livraison équipement</label><input type="text" id="field_pctLivraison" value="${existingNode?.pctLivraison || 0}"></div>
+                <div class="form-group"><label>Accessoires livrés</label><input type="text" id="field_accessoires" value="${existingNode?.accessoires || ''}"></div>
+                <div class="form-group"><label>% réception équipement</label><input type="text" id="field_pctReceptionEquip" value="${existingNode?.pctReceptionEquip || 0}"></div>
+                <div class="form-group"><label>Mise à disposition client</label><input type="text" id="field_miseDispo" value="${existingNode?.miseDispo || ''}"></div>
+                <div class="form-group"><label>Réception client</label><input type="text" id="field_receptionClient" value="${existingNode?.receptionClient || ''}"></div>
+
+                <div class="section-title">🔧 Montage</div>
+                <div class="form-group"><label>% pré-assemblage équipe</label><input type="text" id="field_pctPreassemblage" value="${existingNode?.pctPreassemblage || 0}"></div>
+                <div class="form-group"><label>% installation équipement</label><input type="text" id="field_pctInstallation" value="${existingNode?.pctInstallation || 0}"></div>
+                <div class="form-group"><label>% contrôle équipe</label><input type="text" id="field_pctControleEquipe" value="${existingNode?.pctControleEquipe || 0}"></div>
+                <div class="form-group"><label>% contrôle équipement</label><input type="text" id="field_pctControleEquip" value="${existingNode?.pctControleEquip || 0}"></div>
+                <div class="form-group"><label>Inspection finale</label><input type="text" id="field_inspectionFinale" value="${existingNode?.inspectionFinale || ''}"></div>
+                <div class="form-group"><label>Alerte montage</label><input type="text" id="field_alerteMontage" value="${existingNode?.alerteMontage || 'Non'}"></div>
+
+                <div class="section-title">✅ Réceptions</div>
+                <div class="form-group"><label>Réception partielle</label><input type="text" id="field_receptionPartielle" value="${existingNode?.receptionPartielle || ''}"></div>
+                <div class="form-group"><label>Réception provisoire</label><input type="text" id="field_receptionProvisoire" value="${existingNode?.receptionProvisoire || ''}"></div>
+                <div class="form-group"><label>Réception définitive</label><input type="text" id="field_receptionDefinitive" value="${existingNode?.receptionDefinitive || ''}"></div>
+                <div class="form-group"><label>Alerte qualité finale</label><input type="text" id="field_alerteQualiteFinale" value="${existingNode?.alerteQualiteFinale || 'Non'}"></div>
+
+                <div class="section-title">🔍 Inspection / Qualité</div>
+                <div class="form-group"><label>Inspection client</label><input type="text" id="field_inspectionClient" value="${existingNode?.inspectionClient || ''}"></div>
+                <div class="form-group"><label>Transmission dossier constructeur</label><input type="text" id="field_transmissionDossier" value="${existingNode?.transmissionDossier || ''}"></div>
+            `;
+        } else {
+            // Pour les autres types, on garde la liste simple
+            const fields = getFieldsForType(type);
+            fields.forEach(f => {
+                const div = document.createElement("div");
+                div.className = "form-group";
+                let value = existingNode ? (existingNode[f.name] !== undefined ? existingNode[f.name] : "") : "";
+                div.innerHTML = `<label>${f.label}</label><input type="text" id="field_${f.name}" value="${value}">`;
+                formContainer.appendChild(div);
+            });
+        }
+        modalDiv.appendChild(contentDiv);
+        document.body.appendChild(modalDiv);
+        currentModal = modalDiv;
+        document.getElementById("saveModal").onclick = () => {
+            const formData = {};
+            if (type === "Equipement") {
+                const fields = [
+                    "equipement", "sousEquip", "reservationParc", "alerteLog", "pctSortie", "pctDebitage", "pctChaudro", "pctTraitement", "pctBFT", "alerteProd",
+                    "bl", "pctLivraison", "accessoires", "pctReceptionEquip", "miseDispo", "receptionClient",
+                    "pctPreassemblage", "pctInstallation", "pctControleEquipe", "pctControleEquip", "inspectionFinale", "alerteMontage",
+                    "receptionPartielle", "receptionProvisoire", "receptionDefinitive", "alerteQualiteFinale",
+                    "inspectionClient", "transmissionDossier"
+                ];
+                fields.forEach(f => {
+                    const input = document.getElementById(`field_${f}`);
+                    if (input) formData[f] = input.value;
+                });
+            } else {
+                const fields = getFieldsForType(type);
+                fields.forEach(f => {
+                    const input = document.getElementById(`field_${f.name}`);
+                    if (input) formData[f.name] = input.value;
+                });
+            }
+            if (mode === "create") {
+                addOrUpdateItem("create", type, parentId, formData);
+            } else {
+                addOrUpdateItem("edit", type, null, formData, existingNode.id);
+            }
+            closeModal();
+        };
+        document.getElementById("cancelModal").onclick = closeModal;
+    }
+
+    function getFieldsForType(type) {
+        const common = [{ name: "alerteModif", label: "Alerte modification" }];
+        if (type === "OF") return [
+            { name: "ofNumber", label: "N° OF" },
+            { name: "affaire", label: "Affaire" },
+            { name: "delai", label: "Délai contractuel" },
+            { name: "poids", label: "Poids (kg)" },
+            ...common
+        ];
+        if (type === "Affaire") return [{ name: "affaire", label: "Affaire" }];
+        if (type === "Plan") return [
+            { name: "plan", label: "N° Plan" },
+            { name: "designationPiece", label: "Désignation pièce" },
+            { name: "sousEnsStatut", label: "Sous-ensemble statut" }
+        ];
+        if (type === "DA") return [
+            { name: "da", label: "N° DA" },
+            { name: "pctDA", label: "% DA" },
+            { name: "dateRecepPlan", label: "Date réception planifiée" },
+            { name: "alerteMethode", label: "Alerte Méthode" }
+        ];
+        if (type === "CMD") return [
+            { name: "cde", label: "N° CDE" },
+            { name: "pctCMD", label: "% CMD" },
+            { name: "datePassation", label: "Date passation" },
+            { name: "dateLivraisonPrev", label: "Date livraison prévue" },
+            { name: "pctRecepDA", label: "% réception commande" },
+            { name: "alerteAchats", label: "Alerte Achats" },
+            { name: "dateControle", label: "Date contrôle" },
+            { name: "pctControle", label: "% contrôle" },
+            { name: "resultatControle", label: "Résultat contrôle" },
+            { name: "alerteQualite", label: "Alerte Qualité" }
+        ];
+        return [];
+    }
+
+    function closeModal() {
+        if (currentModal) currentModal.remove();
+        currentModal = null;
+    }
+
+    // Événements globaux
+    document.getElementById("dashboardBody").addEventListener("click", (e) => {
+        const icon = e.target.closest(".expand-icon");
+        if (icon && icon.getAttribute("data-dashboard") === "true") {
+            const id = parseInt(icon.getAttribute("data-id"));
+            if (expandedDashboard.has(id)) expandedDashboard.delete(id);
+            else expandedDashboard.add(id);
+            renderDashboard();
+        }
+    });
+    document.getElementById("expandAllDashboard").addEventListener("click", () => {
+        globalData.forEach(of => collectAllIds(of, expandedDashboard));
+        renderDashboard();
+    });
+    document.getElementById("collapseAllDashboard").addEventListener("click", () => {
+        expandedDashboard.clear();
+        renderDashboard();
+    });
+    document.getElementById("addOfBtn").addEventListener("click", () => openModal("create", "OF", null));
+    document.getElementById("searchInput").addEventListener("input", (e) => { /* filtrage optionnel */ });
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentFilter = btn.getAttribute("data-filter");
+            renderDashboard();
+        });
+    });
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
+            document.getElementById(`${btn.getAttribute("data-tab")}Tab`).classList.add("active");
+            if (btn.getAttribute("data-tab") === "management") renderManagement();
+        });
+    });
+
+    renderDashboard();
+    renderManagement();
+</script>
+</body>
+</html>
